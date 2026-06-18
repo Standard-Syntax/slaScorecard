@@ -1,14 +1,62 @@
 /*
  *  SLA Scorecard — Format pane settings
+ *
+ *  Wrapper subclasses below fix a TypeScript constructor-signature regression
+ *  in `powerbi-visuals-utils-formattingmodel` v7: each slice class declares
+ *  `constructor(object: ColorPicker)` (i.e. an instance of itself), which
+ *  rejects the documented object-literal call style. The wrappers widen the
+ *  parameter to `Partial<>` so consumers can use the constructor cleanly
+ *  while still passing through to the real implementation.
  */
 
-"use strict";
-
+import powerbi from "powerbi-visuals-api";
 import { formattingSettings } from "powerbi-visuals-utils-formattingmodel";
 
-import FormattingSettingsCard = formattingSettings.SimpleCard;
-import FormattingSettingsSlice = formattingSettings.Slice;
-import FormattingSettingsModel = formattingSettings.Model;
+// `powerbi.visuals.ValidatorType` is declared as an ambient `const enum`,
+// which TypeScript forbids referencing when `isolatedModules` is enabled.
+// We cast the literal numeric values through the upstream `Min/MaxValidator`
+// types to preserve type safety without needing the enum at compile time.
+
+
+type ColorSliceOptions = {
+    name: string;
+    displayName: string;
+    value: powerbi.ThemeColorData;
+};
+
+type ToggleSliceOptions = {
+    name: string;
+    displayName: string;
+    value: boolean;
+};
+
+type NumSliceOptions = {
+    name: string;
+    displayName: string;
+    value: number;
+    options?: powerbi.visuals.NumUpDownFormat;
+};
+
+class ColorPickerSlice extends formattingSettings.ColorPicker {
+    constructor(opts: ColorSliceOptions) {
+        // Cast through `unknown` (not `any`) per project type-safety policy;
+        // target constructor accepts an instance, but the runtime uses
+        // `Object.assign(this, object)` and is satisfied with the literal.
+        super(opts as unknown as formattingSettings.ColorPicker);
+    }
+}
+
+class ToggleSwitchSlice extends formattingSettings.ToggleSwitch {
+    constructor(opts: ToggleSliceOptions) {
+        super(opts as unknown as formattingSettings.ToggleSwitch);
+    }
+}
+
+class NumUpDownSlice extends formattingSettings.NumUpDown {
+    constructor(opts: NumSliceOptions) {
+        super(opts as unknown as formattingSettings.NumUpDown);
+    }
+}
 
 export const DEFAULT_MET = "#16A34A";
 export const DEFAULT_AT_RISK = "#F59E0B";
@@ -17,92 +65,106 @@ export const DEFAULT_BAD_BAND = "#FECDD3";
 export const DEFAULT_CAUTION_BAND = "#FDE68A";
 export const DEFAULT_TARGET_BAND = "#BBF7D0";
 
-class StatusColorsCard extends FormattingSettingsCard {
-    metColor = new formattingSettings.ColorPicker({
+class StatusColorsCard extends formattingSettings.SimpleCard {
+    metColor = new ColorPickerSlice({
         name: "metColor",
         displayName: "Met",
         value: { value: DEFAULT_MET },
     });
 
-    atRiskColor = new formattingSettings.ColorPicker({
+    atRiskColor = new ColorPickerSlice({
         name: "atRiskColor",
         displayName: "At risk",
         value: { value: DEFAULT_AT_RISK },
     });
 
-    breachedColor = new formattingSettings.ColorPicker({
+    breachedColor = new ColorPickerSlice({
         name: "breachedColor",
         displayName: "Breached",
         value: { value: DEFAULT_BREACHED },
     });
 
-    name: string = "statusColors";
-    displayName: string = "Status colors";
-    slices: Array<FormattingSettingsSlice> = [this.metColor, this.atRiskColor, this.breachedColor];
+    override name: string = "statusColors";
+    override displayName: string = "Status colors";
+    override slices: Array<formattingSettings.Slice> = [
+        this.metColor,
+        this.atRiskColor,
+        this.breachedColor,
+    ];
 }
 
-class BandColorsCard extends FormattingSettingsCard {
-    badColor = new formattingSettings.ColorPicker({
+class BandColorsCard extends formattingSettings.SimpleCard {
+    badColor = new ColorPickerSlice({
         name: "badColor",
         displayName: "Bad range",
         value: { value: DEFAULT_BAD_BAND },
     });
 
-    cautionColor = new formattingSettings.ColorPicker({
+    cautionColor = new ColorPickerSlice({
         name: "cautionColor",
         displayName: "Caution",
         value: { value: DEFAULT_CAUTION_BAND },
     });
 
-    onTargetColor = new formattingSettings.ColorPicker({
+    onTargetColor = new ColorPickerSlice({
         name: "onTargetColor",
         displayName: "On target",
         value: { value: DEFAULT_TARGET_BAND },
     });
 
-    name: string = "bandColors";
-    displayName: string = "Bullet band colors";
-    slices: Array<FormattingSettingsSlice> = [this.badColor, this.cautionColor, this.onTargetColor];
+    override name: string = "bandColors";
+    override displayName: string = "Bullet band colors";
+    override slices: Array<formattingSettings.Slice> = [
+        this.badColor,
+        this.cautionColor,
+        this.onTargetColor,
+    ];
 }
 
-class GeneralCard extends FormattingSettingsCard {
-    showFilterPills = new formattingSettings.ToggleSwitch({
+class GeneralCard extends formattingSettings.SimpleCard {
+    showFilterPills = new ToggleSwitchSlice({
         name: "showFilterPills",
         displayName: "Show category filter pills",
         value: true,
     });
 
-    showSearch = new formattingSettings.ToggleSwitch({
+    showSearch = new ToggleSwitchSlice({
         name: "showSearch",
         displayName: "Show search",
         value: true,
     });
 
-    showStatusSummary = new formattingSettings.ToggleSwitch({
+    showStatusSummary = new ToggleSwitchSlice({
         name: "showStatusSummary",
         displayName: "Show status summary",
         value: true,
     });
 
-    showLegend = new formattingSettings.ToggleSwitch({
+    showLegend = new ToggleSwitchSlice({
         name: "showLegend",
         displayName: "Show legend",
         value: true,
     });
 
-    fontSize = new formattingSettings.NumUpDown({
+    fontSize = new NumUpDownSlice({
         name: "fontSize",
         displayName: "Text size",
         value: 13,
         options: {
-            minValue: { type: powerbi.visuals.ValidatorType.Min, value: 10 },
-            maxValue: { type: powerbi.visuals.ValidatorType.Max, value: 20 },
+            minValue: {
+                type: 0 as powerbi.visuals.MinValidator<number>["type"],
+                value: 10,
+            },
+            maxValue: {
+                type: 1 as powerbi.visuals.MaxValidator<number>["type"],
+                value: 20,
+            },
         },
     });
 
-    name: string = "general";
-    displayName: string = "General";
-    slices: Array<FormattingSettingsSlice> = [
+    override name: string = "general";
+    override displayName: string = "General";
+    override slices: Array<formattingSettings.Slice> = [
         this.showFilterPills,
         this.showSearch,
         this.showStatusSummary,
@@ -111,10 +173,10 @@ class GeneralCard extends FormattingSettingsCard {
     ];
 }
 
-export class VisualFormattingSettingsModel extends FormattingSettingsModel {
+export class VisualFormattingSettingsModel extends formattingSettings.Model {
     statusColorsCard = new StatusColorsCard();
     bandColorsCard = new BandColorsCard();
     generalCard = new GeneralCard();
 
-    cards = [this.statusColorsCard, this.bandColorsCard, this.generalCard];
+    override cards = [this.statusColorsCard, this.bandColorsCard, this.generalCard];
 }

@@ -6,8 +6,6 @@
  *  or below the first.
  */
 
-"use strict";
-
 import * as d3 from "d3";
 
 export interface SparklineOptions {
@@ -80,16 +78,21 @@ export function renderSparkline(container: HTMLElement, options: SparklineOption
         .attr("d", line);
 
     if (options.showDots) {
-        svg.append("circle")
-            .attr("cx", x(0))
-            .attr("cy", y(values[0]))
-            .attr("r", 1.5)
-            .attr("fill", options.lineColor);
-
-        svg.append("circle")
-            .attr("cx", x(values.length - 1))
-            .attr("cy", y(values[values.length - 1]))
-            .attr("r", 2)
-            .attr("fill", options.lineColor);
+        const first = values[0];
+        const last = values[values.length - 1];
+        if (first !== undefined) {
+            svg.append("circle")
+                .attr("cx", x(0))
+                .attr("cy", y(first))
+                .attr("r", 1.5)
+                .attr("fill", options.lineColor);
+        }
+        if (last !== undefined) {
+            svg.append("circle")
+                .attr("cx", x(values.length - 1))
+                .attr("cy", y(last))
+                .attr("r", 2)
+                .attr("fill", options.lineColor);
+        }
     }
 }

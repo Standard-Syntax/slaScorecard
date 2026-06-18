@@ -5,8 +5,6 @@
  *  (bad / caution / on-target), a current-value bar, and a target marker.
  */
 
-"use strict";
-
 import * as d3 from "d3";
 
 export interface BulletChartOptions {

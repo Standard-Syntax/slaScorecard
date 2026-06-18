@@ -6,9 +6,8 @@
  *  these touch Power BI APIs — they just produce HTMLElements.
  */
 
-"use strict";
-
-import { CategoryBucket, StatusSummary, SlaStatus, STATUS_LABEL } from "./types";
+import type { CategoryBucket, StatusSummary, SlaStatus } from "./types";
+import { STATUS_LABEL } from "./types";
 
 export interface CategoryFilterEvents {
     onSelect: (name: string) => void;

@@ -1,11 +1,13 @@
 /*
- *  SLA Scorecard — Type definitions
+ *  SLA Scorecard — Domain type definitions
+ *
+ *  Pure types: no runtime code, no side effects, no DOM. Anything that
+ *  imports from this file should be testable without a Power BI host.
  */
 
-"use strict";
+import type powerbi from "powerbi-visuals-api";
 
-import powerbi from "powerbi-visuals-api";
-import ISelectionId = powerbi.visuals.ISelectionId;
+export type ISelectionId = powerbi.visuals.ISelectionId;
 
 export type SlaStatus = "met" | "atRisk" | "breached";
 
