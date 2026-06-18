@@ -1,0 +1,57 @@
+# Dependencies
+node_modules/
+
+# pbiviz build output
+.tmp/
+dist/
+*.pbiviz
+webpack.statistics.*.html
+
+# TypeScript build info
+*.tsbuildinfo
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+pnpm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Editors
+.idea/
+*.swp
+*.swo
+*~
+.vscode-test/
+# Note: .vscode/ IS committed — it holds shared launch/mcp/settings.
+
+# AI / IDE tool state
+.opencode/
+.grepai/
+*.swarm/
+.opencode-swarm.json
+
+# Backups / temp
+*.bak
+*.bak.*
+*.tmp
+*.orig
+*.rej
+
+# Local env / secrets
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# Generated typings
+typings/

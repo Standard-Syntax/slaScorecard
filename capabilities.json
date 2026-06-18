@@ -1,0 +1,224 @@
+{
+    "dataRoles": [
+        {
+            "displayName": "SLA",
+            "name": "sla",
+            "kind": "Grouping"
+        },
+        {
+            "displayName": "Category",
+            "name": "category",
+            "kind": "Grouping"
+        },
+        {
+            "displayName": "Owner",
+            "name": "owner",
+            "kind": "Grouping"
+        },
+        {
+            "displayName": "Current",
+            "name": "current",
+            "kind": "Measure"
+        },
+        {
+            "displayName": "Target",
+            "name": "target",
+            "kind": "Measure"
+        },
+        {
+            "displayName": "Time to breach (days)",
+            "name": "timeToBreach",
+            "kind": "Measure"
+        },
+        {
+            "displayName": "30D trend (comma-separated values)",
+            "name": "sparkline",
+            "kind": "Measure"
+        }
+    ],
+    "dataViewMappings": [
+        {
+            "categorical": {
+                "categories": {
+                    "select": [
+                        {
+                            "bind": {
+                                "to": "sla"
+                            }
+                        },
+                        {
+                            "bind": {
+                                "to": "category"
+                            }
+                        },
+                        {
+                            "bind": {
+                                "to": "owner"
+                            }
+                        }
+                    ],
+                    "dataReductionAlgorithm": {
+                        "top": {
+                            "count": 500
+                        }
+                    }
+                },
+                "values": {
+                    "select": [
+                        {
+                            "bind": {
+                                "to": "current"
+                            }
+                        },
+                        {
+                            "bind": {
+                                "to": "target"
+                            }
+                        },
+                        {
+                            "bind": {
+                                "to": "timeToBreach"
+                            }
+                        },
+                        {
+                            "bind": {
+                                "to": "sparkline"
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+    ],
+    "objects": {
+        "statusColors": {
+            "displayName": "Status colors",
+            "properties": {
+                "metColor": {
+                    "displayName": "Met",
+                    "type": {
+                        "fill": {
+                            "solid": {
+                                "color": true
+                            }
+                        }
+                    }
+                },
+                "atRiskColor": {
+                    "displayName": "At risk",
+                    "type": {
+                        "fill": {
+                            "solid": {
+                                "color": true
+                            }
+                        }
+                    }
+                },
+                "breachedColor": {
+                    "displayName": "Breached",
+                    "type": {
+                        "fill": {
+                            "solid": {
+                                "color": true
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "bandColors": {
+            "displayName": "Bullet band colors",
+            "properties": {
+                "badColor": {
+                    "displayName": "Bad range",
+                    "type": {
+                        "fill": {
+                            "solid": {
+                                "color": true
+                            }
+                        }
+                    }
+                },
+                "cautionColor": {
+                    "displayName": "Caution",
+                    "type": {
+                        "fill": {
+                            "solid": {
+                                "color": true
+                            }
+                        }
+                    }
+                },
+                "onTargetColor": {
+                    "displayName": "On target",
+                    "type": {
+                        "fill": {
+                            "solid": {
+                                "color": true
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "general": {
+            "displayName": "General",
+            "properties": {
+                "showFilterPills": {
+                    "displayName": "Show category filter pills",
+                    "type": {
+                        "bool": true
+                    }
+                },
+                "showSearch": {
+                    "displayName": "Show search",
+                    "type": {
+                        "bool": true
+                    }
+                },
+                "showStatusSummary": {
+                    "displayName": "Show status summary",
+                    "type": {
+                        "bool": true
+                    }
+                },
+                "showLegend": {
+                    "displayName": "Show legend",
+                    "type": {
+                        "bool": true
+                    }
+                },
+                "fontSize": {
+                    "displayName": "Text size",
+                    "type": {
+                        "formatting": {
+                            "fontSize": true
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "supportsHighlight": true,
+    "supportsKeyboardFocus": true,
+    "supportsLandingPage": true,
+    "supportsEmptyDataView": true,
+    "drilldown": {
+        "roles": [
+            "sla"
+        ]
+    },
+    "tooltips": {
+        "supportedTypes": {
+            "default": true,
+            "canvas": true
+        },
+        "roles": [
+            "sparkline",
+            "current",
+            "target",
+            "timeToBreach"
+        ]
+    },
+    "privileges": []
+}
