@@ -1,9 +1,26 @@
+@import (inline) "./tw-prebuilt.css";
+
 /*
  *  SLA Scorecard — Styles
  *
- *  All colors are theme-driven via CSS variables set on .sla-root by the
- *  visual at runtime. The fallback values in :root are only used if a
- *  variable is not set (which should not happen in practice).
+ *  ## Architecture
+ *
+ *  This file owns:
+ *    - :root CSS variables (the theme token surface)
+ *    - @font-face declarations
+ *    - .sla-root layout shell (font-family, color, bg, overflow)
+ *    - .sla-section--table (overflow-y scrolling behavior)
+ *    - .sla-pill base + active states (component identity)
+ *    - .sla-table grid template (9-column layout, not in Tailwind)
+ *    - .sla-row structural styles + hover/focus states
+ *    - .sla-summary-pill, .sla-status, status-color BEM rules
+ *    - .sla-legend, .sla-landing typography + small bits
+ *
+ *  Layout-only properties (display:flex, padding, gap, flex-wrap, etc.) are
+ *  served by Tailwind utilities in the Svelte components. See tailwind.config.js
+ *  for the theme color tokens. The visual is built by:
+ *    - less-loader compiling visual.less + the @imported tw-prebuilt.css
+ *    - Tailwind utility classes inlined in .svelte components
  */
 
 @font-face {
@@ -25,9 +42,9 @@
     --sla-header-bg: #ffffff;
     --sla-legend-bg: #fafafa;
 
-    --sla-met: #16a34a;
-    --sla-at-risk: #f59e0b;
-    --sla-breached: #dc2626;
+    --sla-met: 22 163 74;
+    --sla-at-risk: 245 158 11;
+    --sla-breached: 220 38 38;
 
     --sla-met-bg: rgba(22, 163, 74, 0.10);
     --sla-at-risk-bg: rgba(245, 158, 11, 0.12);
@@ -66,37 +83,10 @@
     overflow: hidden;
 }
 
-.sla-section {
-    flex: 0 0 auto;
-    min-width: 0;
-}
-
 .sla-section--table {
     flex: 1 1 auto;
     min-height: 0;
     overflow-y: auto;
-}
-
-.sla-section--filter {
-    display: flex;
-    align-items: center;
-    padding: 10px 12px 4px 12px;
-    gap: 8px;
-    border-bottom: 1px solid var(--sla-section-border);
-}
-
-.sla-filter-row {
-    display: flex;
-    align-items: center;
-    width: 100%;
-    gap: 8px;
-}
-
-.sla-filter-pills {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 6px;
 }
 
 .sla-pill {
@@ -147,19 +137,6 @@
     opacity: 0.85;
 }
 
-.sla-section--search {
-    display: flex;
-    align-items: center;
-    padding: 4px 12px 8px 12px;
-    margin-left: auto;
-}
-
-.sla-search {
-    margin-left: auto;
-    display: flex;
-    align-items: center;
-}
-
 .sla-search__input {
     height: 28px;
     width: 200px;
@@ -183,14 +160,6 @@
     outline: none;
 }
 
-.sla-section--header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    padding: 8px 16px 12px 16px;
-    gap: 16px;
-}
-
 .sla-header__title {
     font-size: 18px;
     font-weight: 600;
@@ -202,14 +171,6 @@
     font-size: 12px;
     color: var(--sla-fg-muted);
     margin-top: 2px;
-}
-
-.sla-status-summary {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-    justify-content: flex-end;
 }
 
 .sla-summary-pill {
@@ -434,62 +395,36 @@
 }
 
 .sla-row--met .sla-status {
-    color: var(--sla-met);
+    color: rgb(var(--sla-met));
     background: var(--sla-met-bg);
-    border-color: var(--sla-met);
+    border-color: rgb(var(--sla-met));
 }
 
 .sla-row--atRisk .sla-status {
-    color: var(--sla-at-risk);
+    color: rgb(var(--sla-at-risk));
     background: var(--sla-at-risk-bg);
-    border-color: var(--sla-at-risk);
+    border-color: rgb(var(--sla-at-risk));
 }
 
 .sla-row--breached .sla-status {
-    color: var(--sla-breached);
+    color: rgb(var(--sla-breached));
     background: var(--sla-breached-bg);
-    border-color: var(--sla-breached);
+    border-color: rgb(var(--sla-breached));
 }
 
-.sla-row--met .sla-current { color: var(--sla-met); }
-.sla-row--atRisk .sla-current { color: var(--sla-at-risk); }
-.sla-row--breached .sla-current { color: var(--sla-breached); }
+.sla-row--met .sla-current { color: rgb(var(--sla-met)); }
+.sla-row--atRisk .sla-current { color: rgb(var(--sla-at-risk)); }
+.sla-row--breached .sla-current { color: rgb(var(--sla-breached)); }
 
-.sla-row--met .sla-status__dot { background: var(--sla-met); }
-.sla-row--atRisk .sla-status__dot { background: var(--sla-at-risk); }
-.sla-row--breached .sla-status__dot { background: var(--sla-breached); }
+.sla-row--met .sla-status__dot { background: rgb(var(--sla-met)); }
+.sla-row--atRisk .sla-status__dot { background: rgb(var(--sla-at-risk)); }
+.sla-row--breached .sla-status__dot { background: rgb(var(--sla-breached)); }
 
 .sla-empty {
     padding: 32px 16px;
     text-align: center;
     color: var(--sla-fg-muted);
     font-size: 13px;
-}
-
-.sla-section--legend {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 8px 16px;
-    border-top: 1px solid var(--sla-section-border);
-    background: var(--sla-legend-bg);
-    font-size: 11px;
-    color: var(--sla-fg-muted);
-    gap: 12px;
-    flex-wrap: wrap;
-}
-
-.sla-legend__items {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    flex-wrap: wrap;
-}
-
-.sla-legend__item {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
 }
 
 .sla-legend__swatch {
@@ -509,17 +444,6 @@
 
 .sla-legend__caption {
     text-align: right;
-}
-
-.sla-landing {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    padding: 24px;
-    text-align: center;
-    color: var(--sla-fg);
 }
 
 .sla-landing__title {

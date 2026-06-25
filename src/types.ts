@@ -51,3 +51,9 @@ export const STATUS_LABEL: Record<SlaStatus, string> = {
     atRisk: "At Risk",
     breached: "Breached",
 };
+
+export interface LegendSwatch {
+    label: string;
+    color: string;
+    kind: "band" | "line";
+}

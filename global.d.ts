@@ -14,3 +14,8 @@ declare module "*.png";
 declare module "*.jpg";
 declare module "*.jpeg";
 declare module "*.gif";
+declare module "*svelte-bundle.js" {
+    import type { Component } from "svelte";
+    const App: Component<Record<string, unknown>>;
+    export default App;
+}

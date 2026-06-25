@@ -28,5 +28,8 @@
     "include": [
         "./src/**/*.ts",
         "./*.d.ts"
+    ],
+    "exclude": [
+        "./src/svelte-entry.ts"
     ]
 }

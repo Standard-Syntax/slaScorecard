@@ -38,6 +38,8 @@ Desktop.ini
 .grepai/
 *.swarm/
 .opencode-swarm.json
+opencode.json
+.opencode.json
 
 # Backups / temp
 *.bak
@@ -55,3 +57,6 @@ Desktop.ini
 
 # Generated typings
 typings/
+
+# Test coverage artifacts
+coverage/

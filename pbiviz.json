@@ -1,1 +1,25 @@
-{"visual":{"name":"slaScorecard","displayName":"SLA Scorecard","guid":"slaScorecard48AEF2DFF8BF4338A493DF8505A592D1","visualClassName":"Visual","version":"1.0.0.0","description":"Sortable, filterable SLA scorecard with bullet charts and 30-day trend sparklines.","supportUrl":"https://github.com/example/slaScorecard","gitHubUrl":"https://github.com/example/slaScorecard"},"apiVersion":"5.3.0","author":{"name":"slaScorecard Contributors","email":"visual@example.com"},"assets":{"icon":"assets/icon.png"},"externalJS":null,"style":"style/visual.less","capabilities":"capabilities.json","dependencies":null,"stringResources":[],"version":"1.0.0.0"}
+{
+  "visual": {
+    "name": "slaScorecard",
+    "displayName": "SLA Scorecard",
+    "guid": "slaScorecard48AEF2DFF8BF4338A493DF8505A592D1",
+    "visualClassName": "Visual",
+    "version": "1.0.0.0",
+    "description": "Sortable, filterable SLA scorecard with bullet charts and 30-day trend sparklines.",
+    "supportUrl": "https://github.com/example/slaScorecard",
+    "gitHubUrl": "https://github.com/example/slaScorecard"
+  },
+  "apiVersion": "5.3.0",
+  "author": {
+    "name": "slaScorecard Contributors",
+    "email": "visual@example.com"
+  },
+  "assets": {
+    "icon": "assets/icon.png"
+  },
+  "style": "style/visual.less",
+  "capabilities": "capabilities.json",
+  "dependencies": null,
+  "stringResources": [],
+  "version": "1.0.0.0"
+}

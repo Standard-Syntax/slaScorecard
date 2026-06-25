@@ -195,9 +195,14 @@ export function applyThemeVariables(root: HTMLElement, theme: ThemeColors): void
     setVar("--sla-header-bg", theme.headerBg);
     setVar("--sla-legend-bg", theme.legendBg);
 
-    setVar("--sla-met", theme.good);
-    setVar("--sla-at-risk", theme.neutral);
-    setVar("--sla-breached", theme.bad);
+    const toRgbTriplet = (hex: string): string => {
+        const rgb = hexToRgb(hex);
+        return rgb ? `${rgb.r} ${rgb.g} ${rgb.b}` : hex;
+    };
+
+    setVar("--sla-met", toRgbTriplet(theme.good));
+    setVar("--sla-at-risk", toRgbTriplet(theme.neutral));
+    setVar("--sla-breached", toRgbTriplet(theme.bad));
 
     setVar("--sla-met-bg", hexToRgba(theme.good, 0.10));
     setVar("--sla-at-risk-bg", hexToRgba(theme.neutral, 0.12));

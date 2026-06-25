@@ -8,23 +8,50 @@
   },
   "license": "MIT",
   "scripts": {
+    "build": "webpack --config webpack.config.js --mode production",
+    "build:tw": "tailwindcss -i ./src/tailwind-input.css -o ./style/tw-prebuilt.css --minify",
+    "dev": "webpack serve --config webpack.config.js --mode development",
+    "lint": "eslint .",
+    "package": "npm run build:tw && npm run build && SVELTE_ONLY=true pbiviz package",
     "pbiviz": "pbiviz",
     "start": "pbiviz start",
-    "package": "pbiviz package",
-    "typecheck": "tsc --noEmit",
-    "lint": "eslint ."
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@types/d3": "7.4.3",
     "d3": "7.9.0",
-    "powerbi-visuals-api": "~5.11.0",
+    "powerbi-visuals-api": "~5.3.0",
     "powerbi-visuals-utils-colorutils": "^6.0.6",
     "powerbi-visuals-utils-formattingmodel": "7.0.0"
   },
   "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^5.1.1",
+    "@testing-library/svelte": "^5.4.2",
     "@typescript-eslint/eslint-plugin": "^8.61.1",
+    "@vitest/coverage-v8": "^3.0.0",
+    "autoprefixer": "^10.4.0",
+    "css-loader": "^7.1.2",
     "eslint": "^10.5.0",
     "eslint-plugin-powerbi-visuals": "^1.1.1",
-    "typescript": "6.0.3"
+    "happy-dom": "^20.10.6",
+    "jsdom": "^29.1.1",
+    "less": "^4.2.0",
+    "less-loader": "^12.2.0",
+    "postcss": "^8.4.0",
+    "style-loader": "^4.0.0",
+    "svelte": "^5.0.0",
+    "svelte-check": "^4.0.0",
+    "svelte-loader": "^3.2.4",
+    "svelte-preprocess": "^6.0.3",
+    "tailwindcss": "^3.4.0",
+    "ts-loader": "^9.5.1",
+    "typescript": "6.0.3",
+    "vitest": "^3.0.0",
+    "webpack": "^5.95.0",
+    "webpack-cli": "^5.1.4",
+    "webpack-dev-server": "^5.1.0"
   }
 }

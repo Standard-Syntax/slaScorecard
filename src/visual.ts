@@ -1,49 +1,43 @@
 /*
- *  Power BI Visual — slaScorecard
+ * Power BI Visual — slaScorecard
  *
- *  Renders an SLA scorecard table with category filter pills, a search box,
- *  status summary chips, bullet charts, and 30-day trend sparklines.
+ * Renders an SLA scorecard table with category filter pills, a search box,
+ * status summary chips, bullet charts, and 30-day trend sparklines.
  *
- *  Responsibilities are split across modules:
- *    - settings.ts:        format-pane model
- *    - theme.ts:           color helpers + theme variable application
- *    - row-builder.ts:     data shaping + classification
- *    - table-renderer.ts:  table DOM construction
- *    - row-interactions.ts: per-row events + selection opacity
- *    - chrome.ts:          header chrome orchestration
- *    - components.ts:      pure DOM builders for the chrome regions
- *    - bulletChart.ts / sparkline.ts: chart primitives
+ * Architecture (Phase 2+):
+ *   - visual.ts:       Power BI lifecycle root — owns constructor, update(),
+ *                      getFormattingModel(), installClearCatcher(). Delegated all
+ *                      rendering to App.svelte.
+ *   - App.svelte:      Svelte 5 mounted component — owns the DOM tree, state,
+ *                      and all rendering via applyUpdate(). Renders the table via
+ *                      SlaTable.svelte.
+ *   - settings.ts:      format-pane model
+ *   - theme.ts:        color helpers + theme variable application
+ *   - row-builder.ts:  data shaping + classification
+ *   - components/FilterPills.svelte:   category filter pill row
+ *   - components/SearchBox.svelte:     search input
+ *   - components/StatusSummary.svelte: status summary chips
+ *   - components/Legend.svelte:        bottom legend
+ *   - components/LandingPage.svelte:   empty-state role-mapping instructions
+ *   - components/SlaTable.svelte:      table with selection-opacity effect
+ *   - bulletChart.ts / sparkline.ts: chart primitives
+ *   - opacity-constants.ts: selection-opacity tier values
+ *   - row-tooltip.ts:   tooltip show/move/hide helpers
  *
- *  This file is the orchestration root: it owns the visual lifecycle
- *  (constructor + update + formatting model), wires the chrome to data,
- *  and delegates rendering to the helpers above.
+ * Visual owns:  lifecycle, format pane model, clear-catcher click handler.
+ * App.svelte owns: everything rendered — the full DOM tree, theme application,
+ *                  dataView parsing, buildRows, buildCategoryBuckets, table render.
  */
 
 import { FormattingSettingsService } from "powerbi-visuals-utils-formattingmodel";
 import { ColorHelper } from "powerbi-visuals-utils-colorutils";
+import { mount } from "svelte";
 import powerbi from "powerbi-visuals-api";
 
 import "./../style/visual.less";
 
 import { VisualFormattingSettingsModel } from "./settings";
-import type { CategoryBucket, SlaRow } from "./types";
-import {
-    applyThemeDefaultsToModel,
-    applyThemeVariables,
-    readCssVar,
-    readTheme,
-} from "./theme";
-import {
-    buildCategoryBuckets,
-    buildRows,
-} from "./row-builder";
-import { renderTable } from "./table-renderer";
-import { renderChrome } from "./chrome";
-import { updateSelectionOpacity } from "./row-interactions";
-import {
-    renderLandingPage,
-    type LegendSwatch,
-} from "./components";
+import { applyThemeDefaultsToModel } from "./theme";
 
 type ISandboxExtendedColorPalette = powerbi.extensibility.ISandboxExtendedColorPalette;
 type ISelectionManager = powerbi.extensibility.ISelectionManager;
@@ -59,10 +53,16 @@ type VisualUpdateOptions = powerbi.extensibility.visual.VisualUpdateOptions;
 // Inlined numeric values match the upstream enum (Style = 1 << 4 = 16).
 const VISUAL_UPDATE_TYPE_STYLE = 16;
 
-const CATEGORY_ALL = "All";
-const DEFAULT_TARGET_LINE_COLOR = "#111827";
-const LEGEND_CAPTION =
-    "Bullet chart shows current vs target with qualitative bands \u00B7 sparkline shows 30-day trend";
+// AppInstance is the shape of the mount handle returned by Svelte 5's mount().
+type AppInstance = {
+    applyUpdate: (opts: VisualUpdateOptions) => void;
+};
+
+// Lazy import — resolved at bundle time by webpack's dual-entry.
+// webpack.config.js builds svelte-bundle first (visual.ts depends on it),
+// then visual-bundle. At packaging time pbiviz's webpack does NOT have
+// svelte-loader, so we import the pre-built artifact.
+import App from "../.tmp/build/svelte-bundle.js";
 
 export class Visual implements IVisual {
     private readonly host: IVisualHost;
@@ -72,25 +72,10 @@ export class Visual implements IVisual {
     private readonly selectionManager: ISelectionManager;
     private readonly tooltipService: ITooltipService;
     private readonly formattingSettingsService: FormattingSettingsService;
-    private readonly root: HTMLElement;
 
-    private readonly filterRow: HTMLElement;
-    private readonly searchSlot: HTMLElement;
-    private readonly headerRow: HTMLElement;
-    private readonly statusSummarySlot: HTMLElement;
-    private readonly tableWrap: HTMLElement;
-    private readonly legendSlot: HTMLElement;
-
+    private app: AppInstance | null = null;
     private colorPalette: ISandboxExtendedColorPalette;
     private formattingSettings!: VisualFormattingSettingsModel;
-
-    private rows: SlaRow[] = [];
-    private renderedRows: SlaRow[] = [];
-    private categories: CategoryBucket[] = [];
-    private activeCategory: string = CATEGORY_ALL;
-    private searchQuery: string = "";
-    private renderVersion: number = 0;
-    private tableBody: HTMLElement | null = null;
 
     constructor(options: VisualConstructorOptions | undefined) {
         if (!options) {
@@ -105,34 +90,21 @@ export class Visual implements IVisual {
         this.tooltipService = options.host.tooltipService;
         this.formattingSettingsService = new FormattingSettingsService();
 
-        this.root = document.createElement("div");
-        this.root.className = "sla-root";
-        this.target.appendChild(this.root);
-
-        this.filterRow = this.buildSection("filter");
-        this.searchSlot = this.buildSection("search");
-        this.headerRow = this.buildSection("header");
-        this.statusSummarySlot = this.buildSection("summary");
-        this.tableWrap = this.buildSection("table");
-        this.legendSlot = this.buildSection("legend");
-
-        this.headerRow.appendChild(this.buildHeaderLeft());
-        this.headerRow.appendChild(this.statusSummarySlot);
-
-        this.root.appendChild(this.filterRow);
-        this.root.appendChild(this.searchSlot);
-        this.root.appendChild(this.headerRow);
-        this.root.appendChild(this.tableWrap);
-        this.root.appendChild(this.legendSlot);
+        // Mount App.svelte onto the raw visual element. App.svelte owns its own
+        // .sla-root div — visual.ts no longer creates one imperatively.
+        this.app = mount(App, {
+            target: this.target,
+            props: {
+                host: this.host,
+                colorPalette: this.colorPalette,
+                colorHelper: this.colorHelper,
+                selectionManager: this.selectionManager,
+                tooltipService: this.tooltipService,
+                formattingSettingsService: this.formattingSettingsService,
+            },
+        }) as unknown as AppInstance;
 
         this.installClearCatcher();
-        this.selectionManager.registerOnSelectCallback(() =>
-            updateSelectionOpacity({
-                tableBody: this.requireTableBody(),
-                rows: this.renderedRows,
-                selectionManager: this.selectionManager,
-            }),
-        );
     }
 
     public update(options: VisualUpdateOptions): void {
@@ -144,12 +116,13 @@ export class Visual implements IVisual {
 
         const dataView = options.dataViews?.[0];
         if (!dataView || !dataView.categorical) {
-            this.renderEmpty();
+            this.app?.applyUpdate(options);
             this.events.renderingFinished(options);
             return;
         }
 
         if (options.viewport.width <= 0 || options.viewport.height <= 0) {
+            this.app?.applyUpdate(options);
             this.events.renderingFinished(options);
             return;
         }
@@ -159,6 +132,9 @@ export class Visual implements IVisual {
             dataView,
         );
 
+        // Apply theme defaults to Visual's canonical formattingSettings (used by
+        // getFormattingModel). App.svelte applies the same defaults to its own
+        // copy — idempotent so both stay consistent.
         applyThemeDefaultsToModel({
             dataView,
             palette: this.colorPalette,
@@ -174,14 +150,7 @@ export class Visual implements IVisual {
         });
 
         try {
-            this.rows = buildRows({
-                dataView,
-                palette: this.colorPalette,
-                host: this.host,
-            });
-            this.categories = buildCategoryBuckets(this.rows);
-            this.resetCategoryIfStale();
-            this.render();
+            this.app?.applyUpdate(options);
             this.events.renderingFinished(options);
         } catch (error) {
             console.error("slaScorecard render error", error);
@@ -193,192 +162,13 @@ export class Visual implements IVisual {
         return this.formattingSettingsService.buildFormattingModel(this.formattingSettings);
     }
 
-    private resetCategoryIfStale(): void {
-        if (
-            this.activeCategory !== CATEGORY_ALL &&
-            !this.categories.some((c) => c.name === this.activeCategory)
-        ) {
-            this.activeCategory = CATEGORY_ALL;
-        }
-    }
-
-    private buildSection(suffix: string): HTMLElement {
-        const el = document.createElement("div");
-        el.className = `sla-section sla-section--${suffix}`;
-        return el;
-    }
-
-    private buildHeaderLeft(): HTMLElement {
-        const left = document.createElement("div");
-        left.className = "sla-header__left";
-
-        const title = document.createElement("div");
-        title.className = "sla-header__title";
-        title.textContent = "SLA Scorecard";
-
-        const subtitle = document.createElement("div");
-        subtitle.className = "sla-header__subtitle";
-        subtitle.textContent = "Sorted by risk \u00B7 click a row to drill down";
-
-        left.appendChild(title);
-        left.appendChild(subtitle);
-        return left;
-    }
-
     private installClearCatcher(): void {
+        // Attached to this.target (NOT the Svelte root). The Svelte tree inside
+        // target catches clicks first, so this only fires when the user clicks
+        // empty space (the visual element itself, not a child).
         this.target.addEventListener("click", (event) => {
             if (event.target !== this.target) return;
             this.selectionManager.clear();
-            updateSelectionOpacity({
-                tableBody: this.requireTableBody(),
-                rows: this.renderedRows,
-                selectionManager: this.selectionManager,
-            });
         });
-    }
-
-    private requireTableBody(): HTMLElement {
-        return this.tableBody ?? document.createElement("div");
-    }
-
-    private renderEmpty(): void {
-        const theme = readTheme({
-            colorPalette: this.colorPalette,
-            colorHelper: this.colorHelper,
-        });
-        applyThemeVariables(this.root, theme);
-        renderLandingPage(this.root, () => {
-            this.filterRow.replaceChildren();
-            this.searchSlot.replaceChildren();
-            this.headerRow.replaceChildren();
-            this.statusSummarySlot.replaceChildren();
-            this.tableWrap.replaceChildren();
-            this.legendSlot.replaceChildren();
-        });
-    }
-
-    private render(): void {
-        const theme = readTheme({
-            colorPalette: this.colorPalette,
-            colorHelper: this.colorHelper,
-        });
-        applyThemeVariables(this.root, theme);
-
-        const { generalCard } = this.formattingSettings;
-        const bandCard = this.formattingSettings.bandColorsCard;
-        const targetLine = readCssVar(this.root, "--sla-target-line", DEFAULT_TARGET_LINE_COLOR);
-        const legendSwatches: LegendSwatch[] = [
-            { label: "Bad range", color: bandCard.badColor.value.value, kind: "band" },
-            { label: "Caution", color: bandCard.cautionColor.value.value, kind: "band" },
-            { label: "On target", color: bandCard.onTargetColor.value.value, kind: "band" },
-            { label: "Target line", color: targetLine, kind: "line" },
-        ];
-
-        renderChrome({
-            filterRow: this.filterRow,
-            searchSlot: this.searchSlot,
-            statusSummarySlot: this.statusSummarySlot,
-            legendSlot: this.legendSlot,
-            rows: this.rows,
-            categories: this.categories,
-            activeCategory: this.activeCategory,
-            searchQuery: this.searchQuery,
-            showFilterPills: !!generalCard.showFilterPills.value,
-            showSearch: !!generalCard.showSearch.value,
-            showStatusSummary: !!generalCard.showStatusSummary.value,
-            showLegend: !!generalCard.showLegend.value,
-            statusTheme: {
-                good: theme.good,
-                neutral: theme.neutral,
-                bad: theme.bad,
-            },
-            legendSwatches,
-            legendCaption: LEGEND_CAPTION,
-            onCategorySelect: (name) => {
-                this.activeCategory = name;
-                this.renderTable();
-            },
-            onSearchInput: (value) => {
-                this.searchQuery = value;
-                this.renderTable();
-            },
-        });
-
-        this.renderTable();
-    }
-
-    private renderTable(): void {
-        this.renderVersion++;
-        const filtered = this.applyFilters();
-        this.renderedRows = filtered;
-        const targetLineColor = readCssVar(
-            this.root,
-            "--sla-target-line",
-            DEFAULT_TARGET_LINE_COLOR,
-        );
-
-        const currentRenderVersion = this.renderVersion;
-        const onSelectionChange = (): void => {
-            updateSelectionOpacity({
-                tableBody: this.requireTableBody(),
-                rows: this.renderedRows,
-                selectionManager: this.selectionManager,
-            });
-        };
-
-        this.tableBody = renderTable({
-            tableWrap: this.tableWrap,
-            rows: filtered,
-            targetLineColor,
-            statusColors: this.statusColors(),
-            bandColors: {
-                badColor: this.formattingSettings.bandColorsCard.badColor.value.value,
-                cautionColor: this.formattingSettings.bandColorsCard.cautionColor.value.value,
-                onTargetColor: this.formattingSettings.bandColorsCard.onTargetColor.value.value,
-            },
-            fontSize: this.formattingSettings.generalCard.fontSize.value,
-            renderVersion: currentRenderVersion,
-            onSelectionChange,
-            attachRowEventsArgs: {
-                host: this.host,
-                selectionManager: this.selectionManager,
-                tooltipService: this.tooltipService,
-                renderVersion: currentRenderVersion,
-                onSelectionChange,
-            },
-        });
-
-        // Re-apply the current selection to the freshly created DOM after
-        // a microtask so the rows exist when the function inspects them.
-        queueMicrotask(() => {
-            if (this.renderVersion !== currentRenderVersion) return;
-            updateSelectionOpacity({
-                tableBody: this.requireTableBody(),
-                rows: filtered,
-                selectionManager: this.selectionManager,
-            });
-        });
-    }
-
-    private applyFilters(): SlaRow[] {
-        const query = this.searchQuery.trim().toLowerCase();
-        return this.rows.filter((row) => {
-            if (this.activeCategory !== CATEGORY_ALL && row.category !== this.activeCategory) {
-                return false;
-            }
-            if (query && !row.slaName.toLowerCase().includes(query)) {
-                return false;
-            }
-            return true;
-        });
-    }
-
-    private statusColors(): { met: string; atRisk: string; breached: string } {
-        const card = this.formattingSettings.statusColorsCard;
-        return {
-            met: card.metColor.value.value,
-            atRisk: card.atRiskColor.value.value,
-            breached: card.breachedColor.value.value,
-        };
     }
 }

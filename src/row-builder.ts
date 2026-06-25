@@ -295,3 +295,71 @@ export function formatTargetValue(row: SlaRow): string {
     }
     return row.target.toString();
 }
+
+/**
+ * Compute the max value for a bullet chart axis.
+ *
+ * Uses 1.2× the target as headroom so the target line and band
+ * regions remain visible even when current ≈ target.
+ */
+export function computeBulletMaxValue(row: SlaRow): number {
+    return Math.max(
+        row.target * 1.2,
+        row.current,
+        row.badThreshold,
+        row.cautionThreshold,
+    );
+}
+
+export const SPARKLINE_GAIN_COLOR = "#10B981";
+export const SPARKLINE_LOSS_COLOR = "#EF4444";
+export const SPARKLINE_FLAT_COLOR = "#94A3B8";
+export const SPARKLINE_FLAT_VALUES: readonly number[] = [
+    50, 50, 50, 50, 50, 50, 50, 50,
+];
+
+export interface SparklineRenderOptions {
+    values: number[];
+    lineColor: string;
+    fillColor: string;
+    showDots: boolean;
+}
+
+function lastGteFirst(trend: readonly number[]): boolean {
+    if (trend.length < 2) return false;
+    return trend[trend.length - 1]! >= trend[0]!;
+}
+
+/**
+ * Resolve render options for a sparkline from a trend array.
+ *
+ * Green  when the trend ends above or equal to where it started.
+ * Red    when the trend ends strictly below where it started.
+ * Flat   when there are fewer than 2 data points.
+ */
+export function resolveSparklineOptions(
+    trend: readonly number[],
+): SparklineRenderOptions {
+    if (lastGteFirst(trend)) {
+        return {
+            values: [...trend],
+            lineColor: SPARKLINE_GAIN_COLOR,
+            fillColor: SPARKLINE_GAIN_COLOR,
+            showDots: true,
+        };
+    }
+    if (trend.length >= 2) {
+        return {
+            values: [...trend],
+            lineColor: SPARKLINE_LOSS_COLOR,
+            fillColor: SPARKLINE_LOSS_COLOR,
+            showDots: true,
+        };
+    }
+    return {
+        values: [...SPARKLINE_FLAT_VALUES],
+        lineColor: SPARKLINE_FLAT_COLOR,
+        fillColor: SPARKLINE_FLAT_COLOR,
+        showDots: false,
+    };
+}
